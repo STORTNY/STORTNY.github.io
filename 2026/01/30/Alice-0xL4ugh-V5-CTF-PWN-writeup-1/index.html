@@ -19,19 +19,19 @@
   <meta name="author" content="stortny">
   <meta name="keywords" content="">
   
-    <meta name="description" content="Tcache poisoning to RCE - UAF - gLibc 2.39I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.We had the idea to make this challenge 24h after the ctf started so w">
+    <meta name="description" content="Tcache poisoning to RCE - UAF - gLibc 2.39I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.We intended a straightforward simple heap exploit yet some players so">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Alice - 0xL4ugh_V5 CTF PWN writeup">
 <meta property="og:url" content="https://stortny.github.io/2026/01/30/Alice-0xL4ugh-V5-CTF-PWN-writeup-1/index.html">
 <meta property="og:site_name" content="STORTNY">
-<meta property="og:description" content="Tcache poisoning to RCE - UAF - gLibc 2.39I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.We had the idea to make this challenge 24h after the ctf started so w">
+<meta property="og:description" content="Tcache poisoning to RCE - UAF - gLibc 2.39I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.We intended a straightforward simple heap exploit yet some players so">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://stortny.github.io/img/alice/ida_main.png">
 <meta property="og:image" content="https://stortny.github.io/img/alice/ida_create.png">
 <meta property="og:image" content="https://stortny.github.io/img/alice/ida_forget.png">
 <meta property="og:image" content="https://stortny.github.io/img/alice/fakechunks.png">
 <meta property="article:published_time" content="2026-01-30T12:29:32.000Z">
-<meta property="article:modified_time" content="2026-01-30T20:27:58.846Z">
+<meta property="article:modified_time" content="2026-01-30T21:22:14.680Z">
 <meta property="article:author" content="stortny">
 <meta property="article:tag" content="PWN">
 <meta name="twitter:card" content="summary_large_image">
@@ -292,7 +292,7 @@
             
               <div class="markdown-body">
                 
-                <h2 id="Tcache-poisoning-to-RCE-UAF-gLibc-2-39"><a href="#Tcache-poisoning-to-RCE-UAF-gLibc-2-39" class="headerlink" title="Tcache poisoning to RCE - UAF - gLibc 2.39"></a><em><strong>Tcache poisoning to RCE - UAF - gLibc 2.39</strong></em></h2><p>I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.<br>We had the idea to make this challenge 24h after the ctf started so we intended a straightforward simple heap exploit yet some players solved it in smarter ways so I’ll put a link to them at the bottom :)</p>
+                <h2 id="Tcache-poisoning-to-RCE-UAF-gLibc-2-39"><a href="#Tcache-poisoning-to-RCE-UAF-gLibc-2-39" class="headerlink" title="Tcache poisoning to RCE - UAF - gLibc 2.39"></a><em><strong>Tcache poisoning to RCE - UAF - gLibc 2.39</strong></em></h2><p>I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.<br>We intended a straightforward simple heap exploit yet some players solved it in smarter ways so I’ll put a link to them at the bottom :)</p>
 <p><em>Challenge overview :</em><br>This challenge requires leveraging a use-after-free vuln to get  arbitrary read&#x2F;write to leak&#x2F;overwrite data and gain RCE.</p>
 <p><em>Challenge files :</em><br><a target="_blank" rel="noopener" href="https://github.com/0xStraw-Hat/pwn-challenges/blob/main/0xL4ugh%20v5/Alice/player.zip">player.zip</a></p>
 <h2 id="Static-analysis"><a href="#Static-analysis" class="headerlink" title="Static analysis"></a><strong>Static analysis</strong></h2><p>The players were given the vulnerable binary and a Docker file running a 23.04 ubuntu image using glibc version 2.39.</p>
@@ -423,8 +423,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2024/12/28/CyberSpark-CTF%E2%80%94-RSA-writeups/" title="CyberSpark CTF— RSA writeups">
-                        <span class="hidden-mobile">CyberSpark CTF— RSA writeups</span>
+                      <a href="/2024/12/28/Fowsniff-CTF-Walkthrough-detailed/" title="Fowsniff CTF Walkthrough">
+                        <span class="hidden-mobile">Fowsniff CTF Walkthrough</span>
                         <span class="visible-mobile">Next</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
